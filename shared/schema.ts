@@ -1,98 +1,105 @@
-import { pgTable, text, serial, integer, boolean, timestamp } from "drizzle-orm/pg-core";
-import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
-// User schema (keeping original)
-export const users = pgTable("users", {
-  id: serial("id").primaryKey(),
-  username: text("username").notNull().unique(),
-  password: text("password").notNull(),
-});
+// User interface
+export interface User {
+  id: number;
+  username: string;
+  password: string;
+}
 
-export const insertUserSchema = createInsertSchema(users).pick({
-  username: true,
-  password: true,
+export const insertUserSchema = z.object({
+  username: z.string(),
+  password: z.string(),
 });
 
 export type InsertUser = z.infer<typeof insertUserSchema>;
-export type User = typeof users.$inferSelect;
 
-// Gallery schema
-export const gallery = pgTable("gallery", {
-  id: serial("id").primaryKey(),
-  title: text("title").notNull(),
-  description: text("description"),
-  imageUrl: text("image_url").notNull(),
-  category: text("category").notNull(),
-});
+// Gallery interface
+export interface Gallery {
+  id: number;
+  title: string;
+  description: string | null;
+  imageUrl: string;
+  category: string;
+}
 
-export const insertGallerySchema = createInsertSchema(gallery).omit({
-  id: true,
+export const insertGallerySchema = z.object({
+  title: z.string(),
+  description: z.string().nullable(),
+  imageUrl: z.string(),
+  category: z.string(),
 });
 
 export type InsertGallery = z.infer<typeof insertGallerySchema>;
-export type Gallery = typeof gallery.$inferSelect;
 
-// Attractions schema
-export const attractions = pgTable("attractions", {
-  id: serial("id").primaryKey(),
-  title: text("title").notNull(),
-  description: text("description").notNull(),
-  imageUrl: text("image_url").notNull(),
-  details: text("details"),
-  location: text("location"),
-});
+// Attractions interface
+export interface Attraction {
+  id: number;
+  title: string;
+  description: string;
+  imageUrl: string;
+  details: string | null;
+  location: string | null;
+}
 
-export const insertAttractionSchema = createInsertSchema(attractions).omit({
-  id: true,
+export const insertAttractionSchema = z.object({
+  title: z.string(),
+  description: z.string(),
+  imageUrl: z.string(),
+  details: z.string().nullable(),
+  location: z.string().nullable(),
 });
 
 export type InsertAttraction = z.infer<typeof insertAttractionSchema>;
-export type Attraction = typeof attractions.$inferSelect;
 
-// News schema
-export const news = pgTable("news", {
-  id: serial("id").primaryKey(),
-  title: text("title").notNull(),
-  content: text("content").notNull(),
-  imageUrl: text("image_url").notNull(),
-  date: text("date").notNull(),
-});
+// News interface
+export interface News {
+  id: number;
+  title: string;
+  content: string;
+  imageUrl: string;
+  date: string;
+}
 
-export const insertNewsSchema = createInsertSchema(news).omit({
-  id: true,
+export const insertNewsSchema = z.object({
+  title: z.string(),
+  content: z.string(),
+  imageUrl: z.string(),
+  date: z.string(),
 });
 
 export type InsertNews = z.infer<typeof insertNewsSchema>;
-export type News = typeof news.$inferSelect;
 
-// Messages schema
-export const messages = pgTable("messages", {
-  id: serial("id").primaryKey(),
-  name: text("name").notNull(),
-  email: text("email").notNull(),
-  subject: text("subject").notNull(),
-  message: text("message").notNull(),
-  createdAt: text("created_at").notNull(),
-});
+// Messages interface
+export interface Message {
+  id: number;
+  name: string;
+  email: string;
+  subject: string;
+  message: string;
+  createdAt: string;
+}
 
-export const insertMessageSchema = createInsertSchema(messages).omit({
-  id: true,
+export const insertMessageSchema = z.object({
+  name: z.string(),
+  email: z.string().email(),
+  subject: z.string(),
+  message: z.string(),
+  createdAt: z.string(),
 });
 
 export type InsertMessage = z.infer<typeof insertMessageSchema>;
-export type Message = typeof messages.$inferSelect;
 
-// Newsletter subscription schema
-export const subscribers = pgTable("subscribers", {
-  id: serial("id").primaryKey(),
-  email: text("email").notNull().unique(),
-  subscriptionDate: text("subscription_date").notNull(),
-});
+// Newsletter subscription interface
+export interface Subscriber {
+  id: number;
+  email: string;
+  subscriptionDate: string;
+}
 
-export const insertSubscriberSchema = createInsertSchema(subscribers).omit({
-  id: true,
+export const insertSubscriberSchema = z.object({
+  email: z.string().email(),
+  subscriptionDate: z.string(),
 });
 
 export type InsertSubscriber = z.infer<typeof insertSubscriberSchema>;
-export type Subscriber = typeof subscribers.$inferSelect;
