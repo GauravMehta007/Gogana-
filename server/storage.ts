@@ -6,6 +6,8 @@ import {
   messages, type Message, type InsertMessage,
   subscribers, type Subscriber, type InsertSubscriber
 } from "@shared/schema";
+import { eq } from "drizzle-orm";
+import { db } from "./db";
 
 // Interface for storage operations
 export interface IStorage {
@@ -303,4 +305,95 @@ export class MemStorage implements IStorage {
   }
 }
 
-export const storage = new MemStorage();
+export class DatabaseStorage implements IStorage {
+  async getUser(id: number): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.id, id));
+    return user || undefined;
+  }
+
+  async getUserByUsername(username: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.username, username));
+    return user || undefined;
+  }
+
+  async createUser(insertUser: InsertUser): Promise<User> {
+    const [user] = await db.insert(users).values(insertUser).returning();
+    return user;
+  }
+  
+  // Gallery
+  async getAllGalleryItems(): Promise<Gallery[]> {
+    return await db.select().from(gallery);
+  }
+  
+  async getGalleryItemsByCategory(category: string): Promise<Gallery[]> {
+    if (category === 'all') {
+      return await db.select().from(gallery);
+    }
+    return await db.select().from(gallery).where(eq(gallery.category, category));
+  }
+  
+  async getGalleryItem(id: number): Promise<Gallery | undefined> {
+    const [item] = await db.select().from(gallery).where(eq(gallery.id, id));
+    return item || undefined;
+  }
+  
+  async createGalleryItem(item: InsertGallery): Promise<Gallery> {
+    const [galleryItem] = await db.insert(gallery).values(item).returning();
+    return galleryItem;
+  }
+  
+  // Attractions
+  async getAllAttractions(): Promise<Attraction[]> {
+    return await db.select().from(attractions);
+  }
+  
+  async getAttraction(id: number): Promise<Attraction | undefined> {
+    const [attraction] = await db.select().from(attractions).where(eq(attractions.id, id));
+    return attraction || undefined;
+  }
+  
+  async createAttraction(attraction: InsertAttraction): Promise<Attraction> {
+    const [attractionItem] = await db.insert(attractions).values(attraction).returning();
+    return attractionItem;
+  }
+  
+  // News
+  async getAllNews(): Promise<News[]> {
+    return await db.select().from(news);
+  }
+  
+  async getNewsItem(id: number): Promise<News | undefined> {
+    const [newsItem] = await db.select().from(news).where(eq(news.id, id));
+    return newsItem || undefined;
+  }
+  
+  async createNewsItem(newsItem: InsertNews): Promise<News> {
+    const [news_item] = await db.insert(news).values(newsItem).returning();
+    return news_item;
+  }
+  
+  // Messages
+  async createMessage(message: InsertMessage): Promise<Message> {
+    const [messageItem] = await db.insert(messages).values(message).returning();
+    return messageItem;
+  }
+  
+  async getAllMessages(): Promise<Message[]> {
+    return await db.select().from(messages);
+  }
+  
+  // Newsletter subscribers
+  async createSubscriber(subscriber: InsertSubscriber): Promise<Subscriber> {
+    const [subscriberItem] = await db.insert(subscribers).values(subscriber).returning();
+    return subscriberItem;
+  }
+  
+  async getSubscriberByEmail(email: string): Promise<Subscriber | undefined> {
+    const [subscriber] = await db.select().from(subscribers).where(eq(subscribers.email, email));
+    return subscriber || undefined;
+  }
+}
+
+// Initialize with a memory storage for development or a database storage for production
+export const storage = new DatabaseStorage();
