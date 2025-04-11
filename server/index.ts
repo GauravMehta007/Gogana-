@@ -1,70 +1,88 @@
-import express, { type Request, Response, NextFunction } from "express";
-import { registerRoutes } from "./routes";
-import { setupVite, serveStatic, log } from "./vite";
+import express from "express";
+import path from "path";
+import { fileURLToPath } from "url";
+import fs from "fs";
+import apiRoutes from "./routes";
 
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
+const port = process.env.PORT || 5000;
+
+// Middleware
 app.use(express.json());
-app.use(express.urlencoded({ extended: false }));
 
-app.use((req, res, next) => {
-  const start = Date.now();
-  const path = req.path;
-  let capturedJsonResponse: Record<string, any> | undefined = undefined;
+// API Routes
+app.use(apiRoutes);
 
-  const originalResJson = res.json;
-  res.json = function (bodyJson, ...args) {
-    capturedJsonResponse = bodyJson;
-    return originalResJson.apply(res, [bodyJson, ...args]);
-  };
-
-  res.on("finish", () => {
-    const duration = Date.now() - start;
-    if (path.startsWith("/api")) {
-      let logLine = `${req.method} ${path} ${res.statusCode} in ${duration}ms`;
-      if (capturedJsonResponse) {
-        logLine += ` :: ${JSON.stringify(capturedJsonResponse)}`;
+// In development mode, use a more straightforward approach
+if (process.env.NODE_ENV === "development") {
+  console.log("Development mode - starting client build");
+  
+  // Start a child process to run the client
+  import("child_process").then(({ spawn }) => {
+    // Run npm build in client directory
+    const buildProcess = spawn('cd client && npm run build', {
+      shell: true,
+      stdio: 'inherit'
+    });
+    
+    buildProcess.on('close', (code) => {
+      console.log(`Client build process exited with code ${code}`);
+      
+      if (code === 0) {
+        console.log("Client built successfully, serving static files");
+        
+        // Serve static files from the client build directory
+        app.use(express.static(path.join(__dirname, "../client/dist")));
+        
+        // Handle client-side routing
+        app.get('*', (req, res) => {
+          // Skip API routes
+          if (req.path.startsWith('/api')) {
+            return;
+          }
+          
+          res.sendFile(path.join(__dirname, '../client/dist/index.html'));
+        });
       }
-
-      if (logLine.length > 80) {
-        logLine = logLine.slice(0, 79) + "…";
-      }
-
-      log(logLine);
-    }
+    });
   });
+  
+  // While waiting for build, serve a temporary loading page
+  app.get('/', (_, res) => {
+    res.send(`
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>Loading Gogana Village Website</title>
+          <style>
+            body { font-family: Arial, sans-serif; text-align: center; padding-top: 100px; }
+            .loader { border: 16px solid #f3f3f3; border-top: 16px solid #3498db; border-radius: 50%; width: 120px; height: 120px; animation: spin 2s linear infinite; margin: 0 auto; }
+            @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+          </style>
+        </head>
+        <body>
+          <h1>Building Application</h1>
+          <p>Please wait while we prepare the Gogana Village website...</p>
+          <div class="loader"></div>
+          <script>
+            setTimeout(() => { window.location.reload(); }, 5000);
+          </script>
+        </body>
+      </html>
+    `);
+  });
+}
 
-  next();
+// Static files in production
+if (process.env.NODE_ENV === "production") {
+  app.use(express.static(path.join(__dirname, "../dist/public")));
+  app.get("*", (_, res) => {
+    res.sendFile(path.join(__dirname, "../dist/public/index.html"));
+  });
+}
+
+// Start the server
+app.listen(port, () => {
+  console.log(`[express] serving on port ${port}`);
 });
-
-(async () => {
-  const server = await registerRoutes(app);
-
-  app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
-    const status = err.status || err.statusCode || 500;
-    const message = err.message || "Internal Server Error";
-
-    res.status(status).json({ message });
-    throw err;
-  });
-
-  // importantly only setup vite in development and after
-  // setting up all the other routes so the catch-all route
-  // doesn't interfere with the other routes
-  if (app.get("env") === "development") {
-    await setupVite(app, server);
-  } else {
-    serveStatic(app);
-  }
-
-  // ALWAYS serve the app on port 5000
-  // this serves both the API and the client.
-  // It is the only port that is not firewalled.
-  const port = 5000;
-  server.listen({
-    port,
-    host: "0.0.0.0",
-    reusePort: true,
-  }, () => {
-    log(`serving on port ${port}`);
-  });
-})();
