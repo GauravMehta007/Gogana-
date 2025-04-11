@@ -38,16 +38,16 @@ export interface Attraction {
   title: string;
   description: string;
   imageUrl: string;
-  details: string | null;
-  location: string | null;
+  details?: string | null;
+  location?: string | null;
 }
 
 export const insertAttractionSchema = z.object({
   title: z.string(),
   description: z.string(),
   imageUrl: z.string(),
-  details: z.string().nullable(),
-  location: z.string().nullable(),
+  details: z.string().nullable().optional(),
+  location: z.string().nullable().optional(),
 });
 
 export type InsertAttraction = z.infer<typeof insertAttractionSchema>;
